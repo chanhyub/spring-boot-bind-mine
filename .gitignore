@@ -201,5 +201,6 @@ gradle-app.setting
 *.hprof
 
 # database
-/src/main/resources/application-dev.yml
-/src/main/resources/application-prod.yml
+/src/main/resources/application.yml
+/src/main/resources/config
+
