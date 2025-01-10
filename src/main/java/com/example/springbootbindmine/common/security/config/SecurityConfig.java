@@ -36,6 +36,10 @@ public class SecurityConfig {
                             "http://localhost",
                             "http://localhost:3000/",
                             "http://localhost:8080")
+//                            List.of(
+//                                    "http://43.201.78.53",
+//                                    "http://43.201.78.53:3000/",
+//                                    "http://43.201.78.53:8080")
                     );
                     // HTTP 메소드(GET, POST 등 모든요청)의 요청을 허용
                     configuration.setAllowedMethods(Collections.singletonList("*"));
