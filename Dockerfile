@@ -5,7 +5,6 @@ RUN echo Asia/Seoul > /etc/timezone
 
 WORKDIR application
 ARG JAR_FILE=build/libs/spring-boot-bind-mine-*.jar
-#ENV	USE_PROFILE prod
 COPY ${JAR_FILE} application.jar
 
 ENTRYPOINT ["java", "-jar", "application.jar"]
