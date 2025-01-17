@@ -1,0 +1,36 @@
+server:
+  port: 8080
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:db;MODE=MYSQL
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+  jpa:
+    defer-datasource-initialization: true
+    open-in-view: false
+    hibernate:
+      ddl-auto: create
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+    show-sql: true
+    properties:
+      hibernate:
+        format-sql: true
+        use-sql-comments: true
+        default-batch-fetch-size: 500
+  servlet:
+    multipart:
+      max-request-size: 300MB
+      max-file-size: 300MB
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: redis
+  jwt:
+    secret: spring-boot-bind-mine-jwt-secret-key
