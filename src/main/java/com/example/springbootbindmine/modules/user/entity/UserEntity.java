@@ -30,7 +30,7 @@ public class UserEntity {
     @Column(name = "image_file_link")
     private String imageFileLink;
 
-    @Column(name = "user_name", nullable = false)
+    @Column(name = "user_name", nullable = false, unique = true)
     private String userName;
 
     @Column(name = "role", nullable = false)
