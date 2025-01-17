@@ -1,14 +1,23 @@
 package com.example.springbootbindmine.modules.common.oauth.service;
 
+import com.example.springbootbindmine.common.exception.RestApiException;
+import com.example.springbootbindmine.common.exception.error.CommonErrorCode;
 import com.example.springbootbindmine.common.redis.service.RedisService;
 import com.example.springbootbindmine.common.security.JWTUtil;
-import com.example.springbootbindmine.common.security.dto.OAuthDTO;
+import com.example.springbootbindmine.modules.common.oauth.dto.OAuthLoginDTO;
+import com.example.springbootbindmine.modules.common.oauth.dto.UserInfoDTO;
+import com.example.springbootbindmine.modules.common.api.GoogleClient;
+import com.example.springbootbindmine.modules.common.api.KakaoClient;
+import com.example.springbootbindmine.modules.common.oauth.request.OAuthLoginRequest;
 import com.example.springbootbindmine.modules.common.oauth.response.OAuthLoginResponse;
 import com.example.springbootbindmine.modules.user.entity.UserEntity;
 import com.example.springbootbindmine.modules.user.enums.Role;
 import com.example.springbootbindmine.modules.user.repository.UserRepository;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,64 +32,81 @@ public class OAuthLoginService {
     private final UserRepository userRepository;
     private final RedisService redisService;
     private final JWTUtil jwtUtil;
+    private final KakaoClient kakaoClient;
+    private final GoogleClient googleClient;
 
     public OAuthLoginService(
             UserRepository userRepository,
             RedisService redisService,
-            JWTUtil jwtUtil) {
+            JWTUtil jwtUtil,
+            KakaoClient kakaoClient,
+            GoogleClient googleClient
+    ) {
         this.userRepository = userRepository;
         this.redisService = redisService;
         this.jwtUtil = jwtUtil;
+        this.kakaoClient = kakaoClient;
+        this.googleClient = googleClient;
     }
 
     @Transactional
-    public ResponseEntity<?> login(OAuthDTO oAuthDTO) {
-        String username = oAuthDTO.provider() + "_" + oAuthDTO.providerId();
+    public OAuthLoginDTO login(OAuthLoginRequest oAuthLoginRequest) throws ParseException {
+        JSONParser jsonParser = new JSONParser();
+
+        UserInfoDTO userInfoDTO;
+
+        switch (oAuthLoginRequest.provider()) {
+            case "kakao" -> {
+                ResponseEntity<String> result = kakaoClient.getUserInfo(oAuthLoginRequest.accessToken());
+                JSONObject userInfo = (JSONObject) jsonParser.parse(result.getBody());
+
+                userInfoDTO = UserInfoDTO.kakao(userInfo);
+            }
+            case "google" -> {
+                ResponseEntity<String> result = googleClient.getTokenInfo(oAuthLoginRequest.accessToken());
+                JSONObject tokenInfo = (JSONObject) jsonParser.parse(result.getBody());
+
+                userInfoDTO = UserInfoDTO.google(tokenInfo);
+            }
+            default -> throw new RestApiException(CommonErrorCode.INVALID_PARAMETER);
+        }
+
+        String username = userInfoDTO.provider() + "_" + userInfoDTO.providerId();
         Optional<UserEntity> optionalUser = userRepository.findByUserName(username);
 
         if (optionalUser.isEmpty()) {
             UserEntity newUserEntity = UserEntity.builder()
-                    .name(oAuthDTO.name())
-                    .email(oAuthDTO.email())
-                    .imageFileLink(oAuthDTO.profileImage())
+                    .name(userInfoDTO.name())
+                    .email(userInfoDTO.email())
+                    .imageFileLink(userInfoDTO.profileImage())
                     .userName(username)
                     .role(Role.USER)
                     .createDate(LocalDateTime.now())
                     .build();
 
-            userRepository.save(newUserEntity);
+            UserEntity saveUser = userRepository.save(newUserEntity);
 
-            return getResponseEntity(newUserEntity);
+            // accessToken과 refreshToken 생성
+            String accessToken = jwtUtil.createJwt("access", saveUser.getUserName(), saveUser.getRole().name(), 60000L);
+            String refreshToken = jwtUtil.createJwt("refresh", saveUser.getUserName(), saveUser.getRole().name(), 259200000L);
+
+            return OAuthLoginDTO.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .userName(saveUser.getUserName())
+                    .build();
         }
         else{
-            return getResponseEntity(optionalUser.get());
+            // accessToken과 refreshToken 생성
+            String accessToken = jwtUtil.createJwt("access", optionalUser.get().getUserName(), optionalUser.get().getRole().name(), 60000L);
+            String refreshToken = jwtUtil.createJwt("refresh", optionalUser.get().getUserName(), optionalUser.get().getRole().name(), 259200000L);
+
+            return OAuthLoginDTO.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .userName(optionalUser.get().getUserName())
+                    .build();
         }
 
-    }
-
-    private ResponseEntity<?> getResponseEntity(UserEntity userEntity) {
-        // accessToken과 refreshToken 생성
-        String accessToken = jwtUtil.createJwt("access", userEntity.getUserName(), userEntity.getRole().name(), 60000L);
-        String refreshToken = jwtUtil.createJwt("refresh", userEntity.getUserName(), userEntity.getRole().name(), 259200000L);
-
-        // redis에 insert (key = username / value = refreshToken)
-        redisService.setValues(userEntity.getUserName(), refreshToken, Duration.ofMillis(259200000L));
-
-        ResponseCookie responseCookie = ResponseCookie.from("refreshToken",refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .maxAge(3*24*60*60)
-                //TODO : 배포 시 변경
-                .domain("localhost")
-                .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
-                .body(
-                        OAuthLoginResponse.builder()
-                                .accessToken(accessToken)
-                                .build()
-                );
     }
 }

@@ -30,19 +30,13 @@ public class KakaoClient {
 
             var entity = new HttpEntity<>(headers);
 
-            var response = restTemplate.exchange(
+
+            return restTemplate.exchange(
                     builder.build().encode().toUri(),
                     HttpMethod.GET,
                     entity,
                     String.class);
 
-            if(response.getBody().isEmpty() || response.getBody().contains("-1")){
-                return ResponseEntity.badRequest().body("카카오 플랫폼에서 일시적인 오류가 발생하였습니다.\n잠시 후 다시 시도해주세요.");
-            }else if(response.getBody().contains("-2")){
-                return ResponseEntity.badRequest().body("엑세스 토큰의 형식이 유효하지 않습니다.");
-            }
-
-            return response;
         }catch (Exception e){
             e.printStackTrace();
 

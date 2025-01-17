@@ -3,11 +3,14 @@ package com.example.springbootbindmine.common.security.config;
 import com.example.springbootbindmine.common.security.JWTUtil;
 import com.example.springbootbindmine.common.security.filter.JWTFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -20,10 +23,25 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    @Value("${spring.datasource.driver-class-name}")
+    private String springDatasourceDriverClassName;
+
     private final JWTUtil jwtUtil;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // h2 관련 옵션
+        if (springDatasourceDriverClassName.equals("org.h2.Driver")) {
+
+            // h2 관련 옵션
+            http.headers(config -> config.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin));
+
+            // h2 관련 authorize
+            http.authorizeHttpRequests(config -> config
+                    .requestMatchers(PathRequest.toH2Console())
+                    .permitAll());
+        }
+
         http
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(request -> {
 
@@ -77,7 +95,7 @@ public class SecurityConfig {
         //경로별 인가 작업
         http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/reissue").permitAll()
+                        .requestMatchers("/", "/oauth/login", "/reissue", "/docs/swagger", "/docs/swagger-ui/**", "/v3/api-docs/**", "/docs/**").permitAll()
                         .anyRequest().authenticated());
         //세션 설정 : STATELESS
         http

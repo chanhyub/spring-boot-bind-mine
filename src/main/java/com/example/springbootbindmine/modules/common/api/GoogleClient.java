@@ -13,8 +13,7 @@ import java.nio.charset.StandardCharsets;
 
 @Component
 public class GoogleClient {
-    // TODO : url, 처리 과정 수정
-    private String tokenInfoUrl = "https://kapi.kakao.com/v1/user/access_token_info";
+    private String tokenInfoUrl = "https://www.googleapis.com/oauth2/v3/userinfo";
 
     //토큰 정보 요청
     public ResponseEntity<String> getTokenInfo(String accessToken){
@@ -30,19 +29,12 @@ public class GoogleClient {
 
             var entity = new HttpEntity<>(headers);
 
-            var response = restTemplate.exchange(
+            return restTemplate.exchange(
                     builder.build().encode().toUri(),
                     HttpMethod.GET,
                     entity,
                     String.class);
 
-            if(response.getBody() == null || response.getBody().contains("-1")){
-                return ResponseEntity.badRequest().body("카카오 플랫폼에서 일시적인 오류가 발생하였습니다.\n잠시 후 다시 시도해주세요.");
-            }else if(response.getBody().contains("-2")){
-                return ResponseEntity.badRequest().body("엑세스 토큰의 형식이 유효하지 않습니다.");
-            }
-
-            return response;
         }catch (Exception e){
             e.printStackTrace();
 

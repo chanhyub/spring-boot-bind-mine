@@ -40,16 +40,10 @@ public class JWTFilter extends OncePerRequestFilter {
         // 유효한지 확인 후 클라이언트로 상태 코드 응답
         try {
             if(jwtUtil.isExpired(originToken)) {
-                PrintWriter writer = response.getWriter();
-                writer.println("access token expired");
-
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
         } catch (ExpiredJwtException e) {
-            PrintWriter writer = response.getWriter();
-            writer.println("access token expired");
-
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -59,9 +53,6 @@ public class JWTFilter extends OncePerRequestFilter {
 
         // JWTFilter는 요청에 대해 accessToken만 취급하므로 access인지 확인
         if(!"access".equals(category)) {
-            PrintWriter writer = response.getWriter();
-            writer.println("invalid access token");
-
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -71,7 +62,7 @@ public class JWTFilter extends OncePerRequestFilter {
         String role = jwtUtil.getRole(originToken);
 
         UserDTO userDTO = UserDTO.builder()
-                .name(username)
+                .userName(username)
                 .role(Role.valueOf(role))
                 .build();
 

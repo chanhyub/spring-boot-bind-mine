@@ -1,28 +1,48 @@
 package com.example.springbootbindmine.common.redis.config;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import java.util.Arrays;
+
 @Configuration
-@EnableRedisRepositories
 @RequiredArgsConstructor
 public class RedisConfig {
-    private final RedisProperties redisProperties;
+    @Value("${spring.data.redis.host}")
+    private String host;
+
+    @Value("${spring.data.redis.port}")
+    private int port;
+
+    @Value("${spring.data.redis.password}")
+    private String password;
+
+    @Autowired
+    private Environment environment;
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        RedisStandaloneConfiguration redisStandaloneConfiguration =
-                new RedisStandaloneConfiguration(redisProperties.getHost(), redisProperties.getPort());
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
 
-        return new LettuceConnectionFactory(redisStandaloneConfiguration);
+        configuration.setHostName(host);
+        configuration.setPort(port);
+        // redis password 설정
+        Arrays.stream(environment.getActiveProfiles()).forEach(profile -> {
+            if (profile.equals("prod")) {
+                configuration.setPassword(password);
+            }
+        });
+
+        return new LettuceConnectionFactory(configuration);
     }
 
     @Bean
