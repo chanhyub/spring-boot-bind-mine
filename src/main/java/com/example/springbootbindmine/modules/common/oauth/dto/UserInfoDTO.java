@@ -1,18 +1,18 @@
-package com.example.springbootbindmine.common.security.dto;
+package com.example.springbootbindmine.modules.common.oauth.dto;
 
 import lombok.Builder;
 import org.json.simple.JSONObject;
 
 @Builder
-public record OAuthDTO(
+public record UserInfoDTO(
         String provider,
         String providerId,
         String email,
         String name,
         String profileImage
 ) {
-    public static OAuthDTO google(JSONObject attribute) {
-        return OAuthDTO.builder()
+    public static UserInfoDTO google(JSONObject attribute) {
+        return UserInfoDTO.builder()
                 .provider("google")
                 .providerId(String.valueOf(attribute.get("sub")))
                 .email(String.valueOf(attribute.get("email")))
@@ -21,10 +21,10 @@ public record OAuthDTO(
                 .build();
     }
 
-    public static OAuthDTO kakao(JSONObject attribute) {
+    public static UserInfoDTO kakao(JSONObject attribute) {
         JSONObject kakaoAccount = (JSONObject) attribute.get("kakao_account");
         JSONObject profile = (JSONObject) kakaoAccount.get("profile");
-        return OAuthDTO.builder()
+        return UserInfoDTO.builder()
                 .provider("kakao")
                 .providerId(String.valueOf(attribute.get("id")))
                 .email(String.valueOf(kakaoAccount.get("email")))
