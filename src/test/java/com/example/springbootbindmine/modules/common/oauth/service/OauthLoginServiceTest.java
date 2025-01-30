@@ -1,5 +1,6 @@
 package com.example.springbootbindmine.modules.common.oauth.service;
 
+import com.example.springbootbindmine.common.exception.RestApiException;
 import com.example.springbootbindmine.common.security.JWTUtil;
 import com.example.springbootbindmine.modules.common.api.GoogleClient;
 import com.example.springbootbindmine.modules.common.api.KakaoClient;
@@ -10,6 +11,7 @@ import com.example.springbootbindmine.modules.user.entity.UserEntity;
 import com.example.springbootbindmine.modules.user.enums.Role;
 import com.example.springbootbindmine.modules.user.repository.UserRepository;
 import org.json.simple.parser.ParseException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,7 +65,7 @@ public class OauthLoginServiceTest {
 
         UserEntity saveUser = userRepository.save(userEntity);
 
-        String accessToken = jwtUtil.createJwt("access", saveUser.getUserName(), saveUser.getRole().name(), 60000L);
+        String accessToken = jwtUtil.createJwt("access", saveUser.getUserName(), saveUser.getRole().name(), 3600000L);
         String refreshToken = jwtUtil.createJwt("refresh", saveUser.getUserName(), saveUser.getRole().name(), 259200000L);
 
         OAuthLoginDTO.builder()
@@ -101,9 +103,9 @@ public class OauthLoginServiceTest {
                 .build();
 
         userRepository.save(userEntity);
-        UserEntity existUser = userRepository.findByUserName(username).get();
+        UserEntity existUser = userRepository.findByUserNameAndDeleteDateNull(username).get();
 
-        String accessToken = jwtUtil.createJwt("access", existUser.getUserName(), existUser.getRole().name(), 60000L);
+        String accessToken = jwtUtil.createJwt("access", existUser.getUserName(), existUser.getRole().name(), 3600000L);
         String refreshToken = jwtUtil.createJwt("refresh", existUser.getUserName(), existUser.getRole().name(), 259200000L);
 
         OAuthLoginDTO.builder()
@@ -121,6 +123,16 @@ public class OauthLoginServiceTest {
         assertEquals(oAuthLoginDTO.accessToken(), accessToken);
         assertEquals(oAuthLoginDTO.refreshToken(), refreshToken);
         assertEquals(oAuthLoginDTO.userName(), existUser.getUserName());
+    }
+
+    @DisplayName("유효하지 않은 provider가 들어온 경우 예외를 발생시킨다.")
+    @Test
+    void invalidProvider() {
+        // given
+        OAuthLoginRequest oAuthLoginRequest = new OAuthLoginRequest("kakao access token", "invalid");
+
+        // when, then
+        Assertions.assertThrows(RestApiException.class, () -> oAuthLoginService.login(oAuthLoginRequest));
     }
 
     private UserInfoDTO createUserInfoDTO() {
