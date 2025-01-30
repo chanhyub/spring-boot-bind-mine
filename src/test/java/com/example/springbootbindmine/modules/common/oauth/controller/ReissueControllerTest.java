@@ -1,36 +1,28 @@
 package com.example.springbootbindmine.modules.common.oauth.controller;
 
-import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.example.springbootbindmine.common.redis.service.RedisService;
+import com.example.springbootbindmine.common.restdocs.RestDocsBasicTest;
 import com.example.springbootbindmine.common.security.JWTUtil;
 import com.example.springbootbindmine.modules.user.entity.UserEntity;
 import com.example.springbootbindmine.modules.user.enums.Role;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
-import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import java.time.LocalDateTime;
 
-import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.resourceDetails;
-import static org.springframework.restdocs.operation.preprocess.Preprocessors.*;
+import static org.springframework.restdocs.cookies.CookieDocumentation.*;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -40,14 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @DisplayName("ReissueControllerTest 테스트")
 @WebMvcTest(ReissueController.class)
-@AutoConfigureRestDocs
-@ExtendWith(RestDocumentationExtension.class)
-@ActiveProfiles("test")
-public class ReissueControllerTest {
-    @Autowired
-    MockMvc mockMvc;
-    @Autowired
-    ObjectMapper objectMapper;
+public class ReissueControllerTest extends RestDocsBasicTest {
     @MockitoBean
     RedisService redisService;
     @MockitoBean
@@ -88,7 +73,7 @@ public class ReissueControllerTest {
         Mockito.when(jwtUtil.getRole("existRefreshToken")).thenReturn(userEntity.getRole().name());
         Mockito.when(redisService.getValues("refreshToken")).thenReturn(redisRefreshToken);
         Mockito.when(redisService.checkExistsValue(redisRefreshToken)).thenReturn(false);
-        Mockito.when(jwtUtil.createJwt("access", userEntity.getUserName(), userEntity.getRole().name(), 600000L)).thenReturn(newAccessToken);
+        Mockito.when(jwtUtil.createJwt("access", userEntity.getUserName(), userEntity.getRole().name(), 3600000L)).thenReturn(newAccessToken);
         Mockito.when(jwtUtil.createJwt("refresh", userEntity.getUserName(), userEntity.getRole().name(), 259200000L)).thenReturn(newRefreshToken);
 
         Cookie responseCookie = new Cookie("refreshToken", newRefreshToken);
@@ -102,13 +87,16 @@ public class ReissueControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .with(csrf()))
                 .andDo(print())
-                .andDo(MockMvcRestDocumentationWrapper.document("reissue",
-                                resourceDetails().description("JWT 토큰 재발급"),
-                                preprocessRequest(prettyPrint()),
-                                preprocessResponse(prettyPrint()),
+                .andDo(restDocs.document(
+                                requestCookies(
+                                        cookieWithName("refreshToken").description("리프레시 토큰")
+                                ),
                                 responseFields(
                                         fieldWithPath("accessToken").type(JsonFieldType.STRING)
                                                 .description("Access 토큰")
+                                ),
+                                responseCookies(
+                                        cookieWithName("refreshToken").description("Refresh 토큰")
                                 )
                         )
                 )
