@@ -95,7 +95,7 @@ public class UserRepositoryTest {
         UserEntity saveUserEntity = userRepository.save(userEntity);
 
         // when
-        Optional<UserEntity> findUserEntity = userRepository.findByUserName(saveUserEntity.getUserName());
+        Optional<UserEntity> findUserEntity = userRepository.findByUserNameAndDeleteDateNull(saveUserEntity.getUserName());
 
         // then
         assertTrue(findUserEntity.isPresent());
@@ -114,7 +114,7 @@ public class UserRepositoryTest {
         UserEntity saveUserEntity = userRepository.save(userEntity);
 
         // when
-        Optional<UserEntity> findUserEntity = userRepository.findByUserName("notFound");
+        Optional<UserEntity> findUserEntity = userRepository.findByUserNameAndDeleteDateNull("notFound");
 
         // then
         assertTrue(findUserEntity.isEmpty());
